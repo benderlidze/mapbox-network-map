@@ -49,6 +49,7 @@
 
     <script>
         const allFeatures = []
+        const checkboxes = []
         const filtersDiv = document.getElementById('filters');
         // import { kml, kmlWithFolders } from "https://unpkg.com/@tmcw/togeojson";
         // fetch("SG.GS 20230704.kmz (2).kml")
@@ -117,9 +118,14 @@
                 layout: {
                     visibility: 'visible'
                 },
-
                 'filter': ['==', '$type', "Point"]
             });
+
+            map.on("click", "lines", (e) => {
+
+                console.log('e,e.features[0]', e, e.features[0]);
+
+            })
 
             fetch("SG.GS 20230704.kmz (2).kml")
                 .then(function (response) {
@@ -158,6 +164,25 @@
                         input.addEventListener('change', () => {
                             console.log('data.meta.name', data, data.meta.name);
                             console.log('folderPath', folderPath);
+                            console.log('folderPath', folderPath.join("/"));
+
+                            const path = folderPath.join("/");
+                            if (checkboxes.includes(path)) {
+                                const index = checkboxes.indexOf(path);
+                                checkboxes.splice(index, 1);
+                            } else {
+                                checkboxes.push(path);
+                            }
+
+                            const filteredData = allFeatures.filter(d => !checkboxes.some(box =>
+                                d.properties.path.includes(box)
+                            ))
+
+                            const FeatureCollection = {
+                                "type": "FeatureCollection",
+                                "features": filteredData
+                            }
+                            map.getSource('mainData').setData(FeatureCollection);
                         });
 
                         container.appendChild(input);
@@ -166,7 +191,7 @@
                     }
                     for (const child of data.children) {
                         recursiveFolder(child, level + 1, [...currentPath, data.meta?.name]); // Increment level correctly
-                        console.log('child', child);
+                        // console.log('child', child);
                         child.properties && (child.properties.path = [...currentPath, data.meta?.name].join("/"));
                         child.type !== "folder" && allFeatures.push(child);
                     }
