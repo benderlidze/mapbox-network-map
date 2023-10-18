@@ -47,8 +47,8 @@
     </div>
     <div id="map"></div>
 
-    <script type="module">
-
+    <script>
+        const allFeatures = []
         const filtersDiv = document.getElementById('filters');
         // import { kml, kmlWithFolders } from "https://unpkg.com/@tmcw/togeojson";
         // fetch("SG.GS 20230704.kmz (2).kml")
@@ -70,7 +70,7 @@
 
         map.on('style.load', () => {
 
-            map.addSource('map', {
+            map.addSource('mainData', {
                 'type': 'geojson',
                 'data': {
                     'type': 'FeatureCollection',
@@ -81,7 +81,7 @@
             map.addLayer({
                 id: "lines",
                 type: 'line',
-                source: 'map',
+                source: 'mainData',
                 paint: {
                     'line-color': ['get', 'stroke'],
                     'line-width': 2
@@ -92,7 +92,7 @@
             map.addLayer({
                 id: "circles",
                 type: 'circle',
-                source: 'map',
+                source: 'mainData',
                 paint: {
                     'circle-color': 'transparent',
                     'circle-radius': 10,
@@ -109,7 +109,7 @@
             map.addLayer({
                 id: "circles_inner",
                 type: 'circle',
-                source: 'map',
+                source: 'mainData',
                 paint: {
                     'circle-color': 'blue',
                     'circle-radius': 5,
@@ -131,22 +131,49 @@
                     const names = [];
                     recursiveFolder(folders, 0)
 
+                    const FeatureCollection = {
+                        "type": "FeatureCollection",
+                        "features": allFeatures
+                    }
+                    map.getSource('mainData').setData(FeatureCollection);
                 });
 
-            function recursiveFolder(data, level) {
+            function recursiveFolder(data, level, currentPath = []) {
                 if (data.children) {
-                    if (data.meta && data.meta.name) {
+                    if (data.meta && data.meta.name && level < 4) {
                         console.log('data.', level, "-".repeat(level), data.meta.name);
+                        const folderPath = [...currentPath, data.meta.name];
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.alignItems = 'center';
+                        container.style.flexDirection = 'row';
+                        container.style.marginLeft = `${level * 12}px`;
+
                         const div = document.createElement('div');
-                        div.textContent = "-".repeat(level) + data.meta.name;
-                        filtersDiv.appendChild(div);
+                        div.textContent = data.meta.name;
+
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = true;
+                        input.addEventListener('change', () => {
+                            console.log('data.meta.name', data, data.meta.name);
+                            console.log('folderPath', folderPath);
+                        });
+
+                        container.appendChild(input);
+                        container.appendChild(div);
+                        filtersDiv.appendChild(container);
                     }
                     for (const child of data.children) {
-                        recursiveFolder(child, level + 1); // Increment level correctly
+                        recursiveFolder(child, level + 1, [...currentPath, data.meta?.name]); // Increment level correctly
+                        console.log('child', child);
+                        child.properties && (child.properties.path = [...currentPath, data.meta?.name].join("/"));
+                        child.type !== "folder" && allFeatures.push(child);
                     }
                 }
                 return data;
             }
+
 
             // fetch("data/map1.geojson")
             //     .then(response => response.json())
